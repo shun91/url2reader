@@ -1,0 +1,53 @@
+:root {
+  color-scheme: light;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  margin: 0;
+  padding: 0;
+  background: #ffffff;
+  color: #111111;
+}
+
+body {
+  font-family: "Noto Serif JP", "Yu Mincho", "Hiragino Mincho ProN", serif;
+  line-height: 1.85;
+}
+
+main {
+  width: min(780px, 100% - 2rem);
+  margin: 2rem auto 4rem;
+}
+
+article h1,
+article h2,
+article h3,
+article h4,
+article h5,
+article h6 {
+  line-height: 1.35;
+  margin-top: 2rem;
+  margin-bottom: 1rem;
+}
+
+article p,
+article ul,
+article ol,
+article blockquote {
+  margin-top: 1rem;
+  margin-bottom: 1rem;
+}
+
+article blockquote {
+  border-left: 3px solid #c9c9c9;
+  padding-left: 1rem;
+}
+
+#status {
+  margin-top: 1.5rem;
+}
