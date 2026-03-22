@@ -38,15 +38,87 @@ article h6 {
 article p,
 article ul,
 article ol,
+article dl,
+article pre,
+article table,
 article blockquote,
 article figure {
   margin-top: 1rem;
   margin-bottom: 1rem;
 }
 
+article p,
+article li,
+article th,
+article td {
+  overflow-wrap: anywhere;
+}
+
+article ul,
+article ol {
+  padding-left: 1.5rem;
+}
+
+article li + li {
+  margin-top: 0.35rem;
+}
+
+article a {
+  color: #0b57d0;
+  text-decoration-thickness: 1px;
+  text-underline-offset: 0.1em;
+  overflow-wrap: anywhere;
+}
+
 article blockquote {
   border-left: 3px solid #c9c9c9;
   padding-left: 1rem;
+}
+
+article pre {
+  overflow-x: auto;
+  background: #f6f8fa;
+  border: 1px solid #e5e7eb;
+  border-radius: 6px;
+  padding: 0.9rem 1rem;
+  line-height: 1.6;
+}
+
+article code {
+  font-family: "SFMono-Regular", Menlo, Consolas, "Liberation Mono", monospace;
+  font-size: 0.9em;
+  background: #f6f8fa;
+  border-radius: 4px;
+  padding: 0.08em 0.35em;
+  overflow-wrap: anywhere;
+}
+
+article pre code {
+  background: transparent;
+  border-radius: 0;
+  padding: 0;
+  overflow-wrap: normal;
+}
+
+article table {
+  width: 100%;
+  border-collapse: collapse;
+  display: block;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  border: 1px solid #e5e7eb;
+}
+
+article th,
+article td {
+  border: 1px solid #e5e7eb;
+  padding: 0.5rem 0.6rem;
+  vertical-align: top;
+}
+
+article th {
+  background: #f7f7f8;
+  font-weight: 700;
 }
 
 article img {

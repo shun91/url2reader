@@ -11,7 +11,35 @@ const ALLOWED_TAGS = new Set([
   "ul",
   "ol",
   "li",
+  "dl",
+  "dt",
+  "dd",
   "blockquote",
+  "pre",
+  "code",
+  "br",
+  "hr",
+  "table",
+  "thead",
+  "tbody",
+  "tfoot",
+  "tr",
+  "th",
+  "td",
+  "strong",
+  "em",
+  "b",
+  "i",
+  "u",
+  "s",
+  "del",
+  "ins",
+  "sup",
+  "sub",
+  "kbd",
+  "samp",
+  "mark",
+  "small",
   "a",
   "figure",
   "figcaption",
@@ -21,9 +49,11 @@ const ALLOWED_TAGS = new Set([
 ]);
 
 const ALLOWED_ATTRIBUTES_BY_TAG = {
-  a: new Set(["href"]),
+  a: new Set(["href", "title"]),
   img: new Set(["src", "srcset", "alt", "title", "width", "height", "loading", "decoding"]),
   source: new Set(["srcset", "sizes", "type", "media"]),
+  th: new Set(["colspan", "rowspan"]),
+  td: new Set(["colspan", "rowspan"]),
   figure: new Set([]),
   figcaption: new Set([]),
   picture: new Set([])
@@ -116,6 +146,11 @@ function sanitizeAttributeValue(tagName, attributeName, value, baseUrl) {
     return /^\d+$/.test(value.trim()) ? value.trim() : null;
   }
 
+  if (attributeName === "colspan" || attributeName === "rowspan") {
+    const normalized = value.trim();
+    return /^[1-9]\d*$/.test(normalized) ? normalized : null;
+  }
+
   if (attributeName === "loading") {
     const normalized = value.trim().toLowerCase();
     return normalized === "lazy" || normalized === "eager" ? normalized : null;
@@ -179,8 +214,9 @@ function copySanitizedNode(node, outputDocument, parent, options) {
     const hasChildElements = element.children.length > 0;
     const isImage = tagName === "img" && element.getAttribute("src");
     const isSource = tagName === "source" && element.getAttribute("srcset");
+    const isVoidRenderable = tagName === "br" || tagName === "hr";
 
-    if (hasRenderableText || hasChildElements || isImage || isSource) {
+    if (hasRenderableText || hasChildElements || isImage || isSource || isVoidRenderable) {
       parent.appendChild(element);
     }
 

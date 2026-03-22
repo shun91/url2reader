@@ -50,4 +50,50 @@ describe("sanitizeArticleHtml", () => {
     expect(output).toContain("<p><a>bad</a></p>");
     expect(output).not.toContain("<img");
   });
+
+  it("テーブルとコードブロックを保持し、危険属性を除去する", () => {
+    const input = `
+      <table style="width:100%">
+        <thead>
+          <tr><th colspan="2" onclick="alert(1)">Col</th></tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td rowspan="2">A</td>
+            <td><pre><code class="language-js">const x = 1;</code></pre></td>
+          </tr>
+        </tbody>
+      </table>
+    `;
+
+    const output = sanitizeArticleHtml(input);
+
+    expect(output).toContain("<table>");
+    expect(output).toContain("<thead>");
+    expect(output).toContain('<th colspan="2">Col</th>');
+    expect(output).toContain('<td rowspan="2">A</td>');
+    expect(output).toContain("<pre><code>const x = 1;</code></pre>");
+    expect(output).not.toContain("onclick=");
+    expect(output).not.toContain("style=");
+    expect(output).not.toContain('class="language-js"');
+  });
+
+  it("本文で一般的な強調や改行タグを保持する", () => {
+    const input = `
+      <p>line1<br />line2</p>
+      <p><strong>strong</strong> <em>em</em> <mark>mark</mark> <small>small</small></p>
+      <hr />
+      <ul><li>a<ul><li>b</li></ul></li></ul>
+    `;
+
+    const output = sanitizeArticleHtml(input);
+
+    expect(output).toContain("<p>line1<br>line2</p>");
+    expect(output).toContain("<strong>strong</strong>");
+    expect(output).toContain("<em>em</em>");
+    expect(output).toContain("<mark>mark</mark>");
+    expect(output).toContain("<small>small</small>");
+    expect(output).toContain("<hr>");
+    expect(output).toContain("<ul><li>a<ul><li>b</li></ul></li></ul>");
+  });
 });
