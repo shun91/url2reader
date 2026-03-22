@@ -38,7 +38,8 @@ article h6 {
 article p,
 article ul,
 article ol,
-article blockquote {
+article blockquote,
+article figure {
   margin-top: 1rem;
   margin-bottom: 1rem;
 }
@@ -46,6 +47,17 @@ article blockquote {
 article blockquote {
   border-left: 3px solid #c9c9c9;
   padding-left: 1rem;
+}
+
+article img {
+  display: block;
+  max-width: 100%;
+  height: auto;
+}
+
+article figcaption {
+  color: #555;
+  font-size: 0.92rem;
 }
 
 #status {

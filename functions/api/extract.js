@@ -61,7 +61,7 @@ export async function onRequestGet(context) {
     );
   }
 
-  const contentHtml = sanitizeArticleHtml(article.content);
+  const contentHtml = sanitizeArticleHtml(article.content, { baseUrl: targetUrl });
 
   return json({
     title: article.title || document.title || "無題",
