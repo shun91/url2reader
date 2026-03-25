@@ -24,9 +24,12 @@ function restoreScrollPosition() {
 
 function setupScrollPositionPersistence() {
   let ticking = false;
+  const saveScrollPosition = () => {
+    localStorage.setItem(scrollStorageKey, String(window.scrollY));
+  };
 
   const persist = () => {
-    localStorage.setItem(scrollStorageKey, String(window.scrollY));
+    saveScrollPosition();
     ticking = false;
   };
 
@@ -44,7 +47,19 @@ function setupScrollPositionPersistence() {
 
   // リロード直前の位置も取りこぼさないように最終保存する
   window.addEventListener("beforeunload", () => {
-    localStorage.setItem(scrollStorageKey, String(window.scrollY));
+    saveScrollPosition();
+  });
+
+  // バックグラウンド遷移時にも保存して取りこぼしを減らす
+  document.addEventListener("visibilitychange", () => {
+    if (document.visibilityState === "hidden") {
+      saveScrollPosition();
+    }
+  });
+
+  // 履歴遷移やタブ破棄時にも最終位置を保存する
+  window.addEventListener("pagehide", () => {
+    saveScrollPosition();
   });
 }
 
