@@ -82,8 +82,14 @@ function renderArticlePage({ article, translationUrl }) {
   const translationScript = translationUrl
     ? `<script>
 (() => {
+  const searchParams = new URLSearchParams(location.search);
   const isGoogleTranslateHost = location.hostname.endsWith(".translate.goog");
-  if (!isGoogleTranslateHost) {
+  const hasTranslateParams =
+    searchParams.has("_x_tr_sl") ||
+    searchParams.has("_x_tr_tl") ||
+    searchParams.has("_x_tr_hl");
+  const fromTranslate = typeof document.referrer === "string" && document.referrer.includes(".translate.goog/");
+  if (!isGoogleTranslateHost && !hasTranslateParams && !fromTranslate) {
     location.replace(${JSON.stringify(translationUrl)});
   }
 })();
@@ -226,8 +232,13 @@ export async function onRequestGet(context) {
   }
 
   const appArticleUrl = new URL(`/${encodeURIComponent(targetUrl)}`, requestUrl.origin).toString();
+  const isTranslateContext =
+    requestUrl.hostname.endsWith(".translate.goog") ||
+    requestUrl.searchParams.has("_x_tr_sl") ||
+    requestUrl.searchParams.has("_x_tr_tl") ||
+    requestUrl.searchParams.has("_x_tr_hl");
   const translationUrl =
-    result.article.language !== "ja" && result.article.language !== "unknown"
+    result.article.language !== "ja" && result.article.language !== "unknown" && !isTranslateContext
       ? buildGoogleTranslateUrl(appArticleUrl)
       : null;
 
