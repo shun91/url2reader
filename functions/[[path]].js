@@ -202,8 +202,25 @@ function isAssetLikePath(pathname) {
   );
 }
 
+function isTranslateContext(requestUrl, requestHeaders) {
+  const referer = requestHeaders.get("referer") || "";
+  const origin = requestHeaders.get("origin") || "";
+  const forwardedHost = requestHeaders.get("x-forwarded-host") || "";
+
+  return (
+    requestUrl.hostname.endsWith(".translate.goog") ||
+    requestUrl.searchParams.has("_x_tr_sl") ||
+    requestUrl.searchParams.has("_x_tr_tl") ||
+    requestUrl.searchParams.has("_x_tr_hl") ||
+    referer.includes(".translate.goog/") ||
+    origin.includes(".translate.goog") ||
+    forwardedHost.includes(".translate.goog")
+  );
+}
+
 export async function onRequestGet(context) {
   const requestUrl = new URL(context.request.url);
+  const translateContext = isTranslateContext(requestUrl, context.request.headers);
 
   if (isAssetLikePath(requestUrl.pathname)) {
     return context.next();
@@ -218,9 +235,11 @@ export async function onRequestGet(context) {
     return renderErrorPage(400, "Invalid URL", "http/https のURLを指定してください。");
   }
 
-  if (source === "path") {
-    const normalizedPath = `/${encodeURIComponent(targetUrl)}`;
-    if (requestUrl.pathname !== normalizedPath) {
+  if (source === "path" && !translateContext) {
+    const isRawUrlPath =
+      requestUrl.pathname.startsWith("/http://") || requestUrl.pathname.startsWith("/https://");
+    if (isRawUrlPath) {
+      const normalizedPath = `/${encodeURIComponent(targetUrl)}`;
       const normalizedUrl = new URL(normalizedPath, requestUrl.origin);
       return Response.redirect(normalizedUrl.toString(), 302);
     }
@@ -232,13 +251,8 @@ export async function onRequestGet(context) {
   }
 
   const appArticleUrl = new URL(`/${encodeURIComponent(targetUrl)}`, requestUrl.origin).toString();
-  const isTranslateContext =
-    requestUrl.hostname.endsWith(".translate.goog") ||
-    requestUrl.searchParams.has("_x_tr_sl") ||
-    requestUrl.searchParams.has("_x_tr_tl") ||
-    requestUrl.searchParams.has("_x_tr_hl");
   const translationUrl =
-    result.article.language !== "ja" && result.article.language !== "unknown" && !isTranslateContext
+    result.article.language !== "ja" && result.article.language !== "unknown" && !translateContext
       ? buildGoogleTranslateUrl(appArticleUrl)
       : null;
 
