@@ -30,7 +30,7 @@ export async function onRequestGet(context) {
   }
 
   const requestUrl = new URL(context.request.url);
-  const appArticleUrl = new URL(`/view?url=${encodeURIComponent(targetUrl)}`, requestUrl.origin).toString();
+  const appArticleUrl = new URL(`/${encodeURIComponent(targetUrl)}`, requestUrl.origin).toString();
   const translationUrl =
     result.article.language !== "ja" && result.article.language !== "unknown"
       ? buildGoogleTranslateUrl(appArticleUrl)
