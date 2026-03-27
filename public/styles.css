@@ -10,7 +10,7 @@ html,
 body {
   margin: 0;
   padding: 0;
-  background: #fafafa;
+  background: #ffffff;
   color: #111111;
 }
 
@@ -22,9 +22,6 @@ body {
 main {
   width: min(780px, 100% - 2rem);
   margin: 2rem auto 4rem;
-  background: #ffffff;
-  border-radius: 12px;
-  padding: 2rem;
 }
 
 article h1,
@@ -133,10 +130,4 @@ article img {
 article figcaption {
   color: #555;
   font-size: 0.92rem;
-}
-
-.source {
-  font-size: 0.9rem;
-  color: #555;
-  margin-bottom: 1.5rem;
 }
