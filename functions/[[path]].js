@@ -26,36 +26,15 @@ function renderHomePage() {
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>URL Reader</title>
-    <style>
-      body {
-        margin: 0;
-        min-height: 100vh;
-        display: grid;
-        place-items: center;
-        background: #f6f7f9;
-        color: #111;
-        font-family: -apple-system, BlinkMacSystemFont, "Hiragino Kaku Gothic ProN", "Yu Gothic", sans-serif;
-      }
-      main {
-        width: min(760px, 92vw);
-        background: #fff;
-        border-radius: 12px;
-        padding: 2rem;
-      }
-      h1 { margin-top: 0; line-height: 1.4; }
-      p, li { line-height: 1.8; }
-      code {
-        background: #f0f0f0;
-        padding: 0.1rem 0.3rem;
-        border-radius: 4px;
-      }
-    </style>
+    <link rel="stylesheet" href="/styles.css" />
   </head>
   <body>
     <main>
-      <h1>URL Reader</h1>
-      <p>URL を次の形式で開くと、記事本文を抽出して表示します。</p>
-      <p><code>/https://example.com/article</code></p>
+      <article>
+        <h1>URL Reader</h1>
+        <p>URL を次の形式で開くと、記事本文を抽出して表示します。</p>
+        <p><code>/https://example.com/article</code></p>
+      </article>
     </main>
   </body>
 </html>`;
@@ -69,11 +48,14 @@ function renderErrorPage(status, title, detail) {
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>${escapeHtml(title)}</title>
+    <link rel="stylesheet" href="/styles.css" />
   </head>
   <body>
     <main>
-      <h1>${escapeHtml(title)}</h1>
-      <p>${escapeHtml(detail)}</p>
+      <article>
+        <h1>${escapeHtml(title)}</h1>
+        <p>${escapeHtml(detail)}</p>
+      </article>
     </main>
   </body>
 </html>`,
@@ -95,6 +77,62 @@ function renderArticlePage({ article, translationUrl }) {
 })();
 </script>`
     : "";
+  const scrollPersistenceScript = `<script>
+(() => {
+  const storageKey = "scroll-position:" + location.pathname;
+
+  const saveScrollPosition = () => {
+    try {
+      localStorage.setItem(storageKey, String(window.scrollY));
+    } catch {
+      // noop
+    }
+  };
+
+  const restoreScrollPosition = () => {
+    try {
+      const rawValue = localStorage.getItem(storageKey);
+      const savedY = Number(rawValue);
+      if (!Number.isFinite(savedY) || savedY < 0) {
+        return;
+      }
+      requestAnimationFrame(() => {
+        window.scrollTo(0, savedY);
+      });
+    } catch {
+      // noop
+    }
+  };
+
+  let ticking = false;
+  const persist = () => {
+    saveScrollPosition();
+    ticking = false;
+  };
+
+  window.addEventListener(
+    "scroll",
+    () => {
+      if (ticking) {
+        return;
+      }
+      ticking = true;
+      requestAnimationFrame(persist);
+    },
+    { passive: true }
+  );
+
+  window.addEventListener("beforeunload", saveScrollPosition);
+  document.addEventListener("visibilitychange", () => {
+    if (document.visibilityState === "hidden") {
+      saveScrollPosition();
+    }
+  });
+  window.addEventListener("pagehide", saveScrollPosition);
+
+  restoreScrollPosition();
+})();
+</script>`;
 
   return `<!doctype html>
 <html lang="${escapeHtml(lang)}">
@@ -102,38 +140,18 @@ function renderArticlePage({ article, translationUrl }) {
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>${safeTitle}</title>
-    <style>
-      :root { color-scheme: light; }
-      body {
-        margin: 0;
-        padding: 2rem 1rem 4rem;
-        font-family: -apple-system, BlinkMacSystemFont, "Hiragino Kaku Gothic ProN",
-          "Yu Gothic", sans-serif;
-        line-height: 1.8;
-        color: #111;
-        background: #fafafa;
-      }
-      main {
-        max-width: 760px;
-        margin: 0 auto;
-        background: #fff;
-        padding: 2rem;
-        border-radius: 12px;
-      }
-      h1 { line-height: 1.4; margin-top: 0; }
-      img { max-width: 100%; height: auto; }
-      pre, code { white-space: pre-wrap; overflow-wrap: anywhere; }
-      a { color: #0b57d0; }
-      .source { font-size: 0.9rem; color: #555; margin-bottom: 1.5rem; }
-    </style>
+    <link rel="stylesheet" href="/styles.css" />
   </head>
   <body>
     <main>
-      <h1>${safeTitle}</h1>
-      <p class="source">Source: <a href="${safeSourceUrl}" rel="noopener noreferrer">${safeSourceUrl}</a></p>
-      <section>${article.contentHtml}</section>
+      <article>
+        <h1>${safeTitle}</h1>
+        <p class="source">Source: <a href="${safeSourceUrl}" rel="noopener noreferrer">${safeSourceUrl}</a></p>
+        <section>${article.contentHtml}</section>
+      </article>
     </main>
     ${translationScript}
+    ${scrollPersistenceScript}
   </body>
 </html>`;
 }

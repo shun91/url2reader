@@ -1,6 +1,7 @@
 # url2reader
 
-指定URLの記事から「タイトル + 本文」だけを抽出して表示する、読書集中向けWebアプリです。
+指定URLの記事から「タイトル + 本文」だけを抽出して表示する、読書集中向けWebアプリです。  
+現在は Cloudflare Pages Functions で HTML を返す MPA 構成です（SPAは使用しません）。
 
 ## URL形式
 
