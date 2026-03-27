@@ -14,5 +14,17 @@
         <p><code>/https://example.com/article</code></p>
       </article>
     </main>
+    <script>
+      (() => {
+        const path = window.location.pathname || "";
+        if (path.startsWith("/http://") || path.startsWith("/https://")) {
+          const rawUrl = path.slice(1);
+          const normalizedPath = "/" + encodeURIComponent(rawUrl);
+          if (path !== normalizedPath) {
+            window.location.replace(normalizedPath);
+          }
+        }
+      })();
+    </script>
   </body>
 </html>

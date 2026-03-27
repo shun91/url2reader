@@ -36,6 +36,18 @@ function renderHomePage() {
         <p><code>/https://example.com/article</code></p>
       </article>
     </main>
+    <script>
+(() => {
+  const path = location.pathname || "";
+  if (path.startsWith("/http://") || path.startsWith("/https://")) {
+    const rawUrl = path.slice(1);
+    const normalizedPath = "/" + encodeURIComponent(rawUrl);
+    if (path !== normalizedPath) {
+      location.replace(normalizedPath);
+    }
+  }
+})();
+</script>
   </body>
 </html>`;
 }
@@ -159,9 +171,15 @@ function renderArticlePage({ article, translationUrl }) {
 function pickTargetUrl(requestUrl) {
   const queryValue = requestUrl.searchParams.get("url");
   if (queryValue && isSupportedHttpUrl(queryValue)) {
-    return queryValue;
+    return { targetUrl: queryValue, source: "query" };
   }
-  return pathToTargetUrl(requestUrl.pathname);
+
+  const pathValue = pathToTargetUrl(requestUrl.pathname);
+  if (pathValue) {
+    return { targetUrl: pathValue, source: "path" };
+  }
+
+  return { targetUrl: null, source: null };
 }
 
 function isAssetLikePath(pathname) {
@@ -185,13 +203,21 @@ export async function onRequestGet(context) {
     return context.next();
   }
 
-  const targetUrl = pickTargetUrl(requestUrl);
+  const { targetUrl, source } = pickTargetUrl(requestUrl);
 
   if (!targetUrl) {
     if (requestUrl.pathname === "/" || requestUrl.pathname === "") {
       return html(renderHomePage());
     }
     return renderErrorPage(400, "Invalid URL", "http/https のURLを指定してください。");
+  }
+
+  if (source === "path") {
+    const normalizedPath = `/${encodeURIComponent(targetUrl)}`;
+    if (requestUrl.pathname !== normalizedPath) {
+      const normalizedUrl = new URL(normalizedPath, requestUrl.origin);
+      return Response.redirect(normalizedUrl.toString(), 302);
+    }
   }
 
   const result = await extractArticleFromUrl(targetUrl);
