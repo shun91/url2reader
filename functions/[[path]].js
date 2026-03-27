@@ -146,8 +146,27 @@ function pickTargetUrl(requestUrl) {
   return pathToTargetUrl(requestUrl.pathname);
 }
 
+function isAssetLikePath(pathname) {
+  if (!pathname || pathname === "/") {
+    return false;
+  }
+
+  const normalized = pathname.toLowerCase();
+  return (
+    normalized.startsWith("/api/") ||
+    normalized === "/favicon.ico" ||
+    normalized.startsWith("/assets/") ||
+    /\.[a-z0-9]+$/.test(normalized)
+  );
+}
+
 export async function onRequestGet(context) {
   const requestUrl = new URL(context.request.url);
+
+  if (isAssetLikePath(requestUrl.pathname)) {
+    return context.next();
+  }
+
   const targetUrl = pickTargetUrl(requestUrl);
 
   if (!targetUrl) {
