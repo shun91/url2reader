@@ -1,4 +1,5 @@
 import { pathToTargetUrl } from "/lib/url.js";
+import { resolveTranslationUrl } from "/lib/translation.js";
 
 const articleEl = document.getElementById("article");
 const statusEl = document.getElementById("status");
@@ -94,6 +95,13 @@ async function run() {
   }
 
   const data = await response.json();
+  const translationUrl = resolveTranslationUrl(data);
+
+  if (translationUrl) {
+    window.location.assign(translationUrl);
+    return;
+  }
+
   renderArticle(data.title, data.contentHtml);
   restoreScrollPosition();
   setStatus("");

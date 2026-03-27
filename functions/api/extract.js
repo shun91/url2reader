@@ -1,6 +1,7 @@
 import { Readability } from "@mozilla/readability";
 import { parseHTML } from "linkedom";
 import { isSupportedHttpUrl } from "../../public/lib/url.js";
+import { buildGoogleTranslateUrl, detectArticleLanguage } from "../../src/lib/language.js";
 import { sanitizeArticleHtml } from "../../src/lib/sanitize.js";
 
 const USER_AGENT = "url2reader/0.1 (+https://example.com)";
@@ -62,10 +63,17 @@ export async function onRequestGet(context) {
   }
 
   const contentHtml = sanitizeArticleHtml(article.content, { baseUrl: targetUrl });
+  const language = detectArticleLanguage({ document, textContent: article.textContent });
+  const requestUrl = new URL(context.request.url);
+  const appArticleUrl = new URL(`/${encodeURIComponent(targetUrl)}`, requestUrl.origin).toString();
+  const translationUrl =
+    language !== "ja" && language !== "unknown" ? buildGoogleTranslateUrl(appArticleUrl) : null;
 
   return json({
     title: article.title || document.title || "無題",
     contentHtml,
-    sourceUrl: targetUrl
+    sourceUrl: targetUrl,
+    language,
+    translationUrl
   });
 }
