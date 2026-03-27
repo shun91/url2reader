@@ -1,10 +1,6 @@
-import { Readability } from "@mozilla/readability";
-import { parseHTML } from "linkedom";
 import { isSupportedHttpUrl } from "../../public/lib/url.js";
-import { buildGoogleTranslateUrl, detectArticleLanguage } from "../../src/lib/language.js";
-import { sanitizeArticleHtml } from "../../src/lib/sanitize.js";
-
-const USER_AGENT = "url2reader/0.1 (+https://example.com)";
+import { extractArticleFromUrl } from "../../src/lib/article.js";
+import { buildGoogleTranslateUrl } from "../../src/lib/language.js";
 
 function json(body, init = {}) {
   const headers = new Headers(init.headers || {});
@@ -28,52 +24,20 @@ export async function onRequestGet(context) {
     return badRequest("INVALID_URL", "only http/https are supported");
   }
 
-  let response;
-  try {
-    response = await fetch(targetUrl, {
-      headers: {
-        "user-agent": USER_AGENT,
-        accept: "text/html,application/xhtml+xml"
-      },
-      redirect: "follow"
-    });
-  } catch {
-    return json(
-      { error: { code: "FETCH_FAILED", message: "failed to fetch target URL" } },
-      { status: 502 }
-    );
+  const result = await extractArticleFromUrl(targetUrl);
+  if (!result.ok) {
+    return json({ error: { code: result.code, message: result.message } }, { status: result.status });
   }
 
-  if (!response.ok) {
-    return json(
-      { error: { code: "FETCH_FAILED", message: `origin returned ${response.status}` } },
-      { status: 502 }
-    );
-  }
-
-  const html = await response.text();
-  const { document } = parseHTML(html);
-  const article = new Readability(document, { charThreshold: 80 }).parse();
-
-  if (!article || !article.content) {
-    return json(
-      { error: { code: "EXTRACTION_FAILED", message: "article extraction failed" } },
-      { status: 422 }
-    );
-  }
-
-  const contentHtml = sanitizeArticleHtml(article.content, { baseUrl: targetUrl });
-  const language = detectArticleLanguage({ document, textContent: article.textContent });
   const requestUrl = new URL(context.request.url);
-  const appArticleUrl = new URL(`/${encodeURIComponent(targetUrl)}`, requestUrl.origin).toString();
+  const appArticleUrl = new URL(`/view?url=${encodeURIComponent(targetUrl)}`, requestUrl.origin).toString();
   const translationUrl =
-    language !== "ja" && language !== "unknown" ? buildGoogleTranslateUrl(appArticleUrl) : null;
+    result.article.language !== "ja" && result.article.language !== "unknown"
+      ? buildGoogleTranslateUrl(appArticleUrl)
+      : null;
 
   return json({
-    title: article.title || document.title || "無題",
-    contentHtml,
-    sourceUrl: targetUrl,
-    language,
+    ...result.article,
     translationUrl
   });
 }
