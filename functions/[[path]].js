@@ -220,7 +220,9 @@ function isTranslateContext(requestUrl, requestHeaders) {
 
 export async function onRequestGet(context) {
   const requestUrl = new URL(context.request.url);
-  const translateContext = isTranslateContext(requestUrl, context.request.headers);
+  const skipLanguageRedirect = requestUrl.searchParams.get("__skip_lang_redirect") === "1";
+  const translateContext =
+    isTranslateContext(requestUrl, context.request.headers) || skipLanguageRedirect;
 
   if (isAssetLikePath(requestUrl.pathname)) {
     return context.next();
@@ -254,7 +256,9 @@ export async function onRequestGet(context) {
 
   const appArticleUrl = new URL(`/${encodeURIComponent(targetUrl)}`, requestUrl.origin).toString();
   if (result.skippedExtraction && !translateContext) {
-    const earlyTranslationUrl = buildGoogleTranslateUrl(appArticleUrl);
+    const articleUrlForTranslate = new URL(appArticleUrl);
+    articleUrlForTranslate.searchParams.set("__skip_lang_redirect", "1");
+    const earlyTranslationUrl = buildGoogleTranslateUrl(articleUrlForTranslate.toString());
     return Response.redirect(earlyTranslationUrl, 302);
   }
 
