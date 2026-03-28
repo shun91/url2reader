@@ -5,7 +5,7 @@ import { sanitizeArticleHtml } from "./sanitize.js";
 
 const USER_AGENT = "url2reader/0.1 (+https://example.com)";
 
-export async function extractArticleFromUrl(targetUrl) {
+export async function extractArticleFromUrl(targetUrl, options = {}) {
   let response;
   try {
     response = await fetch(targetUrl, {
@@ -35,6 +35,28 @@ export async function extractArticleFromUrl(targetUrl) {
 
   const html = await response.text();
   const { document } = parseHTML(html);
+  const initialLanguage = detectArticleLanguage({
+    document,
+    textContent: document.body?.textContent || ""
+  });
+  const shouldSkipExtraction =
+    options.prioritizeLanguageRedirect === true &&
+    initialLanguage !== "ja" &&
+    initialLanguage !== "unknown";
+
+  if (shouldSkipExtraction) {
+    return {
+      ok: true,
+      article: {
+        title: document.title || "無題",
+        contentHtml: "",
+        sourceUrl: targetUrl,
+        language: initialLanguage
+      },
+      skippedExtraction: true
+    };
+  }
+
   const article = new Readability(document, { charThreshold: 80 }).parse();
 
   if (!article || !article.content) {
@@ -47,7 +69,10 @@ export async function extractArticleFromUrl(targetUrl) {
   }
 
   const contentHtml = sanitizeArticleHtml(article.content, { baseUrl: targetUrl });
-  const language = detectArticleLanguage({ document, textContent: article.textContent });
+  const language = detectArticleLanguage({
+    document,
+    textContent: article.textContent || document.body?.textContent || ""
+  });
 
   return {
     ok: true,

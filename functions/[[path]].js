@@ -245,12 +245,19 @@ export async function onRequestGet(context) {
     }
   }
 
-  const result = await extractArticleFromUrl(targetUrl);
+  const result = await extractArticleFromUrl(targetUrl, {
+    prioritizeLanguageRedirect: !translateContext
+  });
   if (!result.ok) {
     return renderErrorPage(result.status, "記事を取得できませんでした", result.message);
   }
 
   const appArticleUrl = new URL(`/${encodeURIComponent(targetUrl)}`, requestUrl.origin).toString();
+  if (result.skippedExtraction && !translateContext) {
+    const earlyTranslationUrl = buildGoogleTranslateUrl(appArticleUrl);
+    return Response.redirect(earlyTranslationUrl, 302);
+  }
+
   const translationUrl =
     result.article.language !== "ja" && result.article.language !== "unknown" && !translateContext
       ? buildGoogleTranslateUrl(appArticleUrl)
