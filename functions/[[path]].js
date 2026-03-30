@@ -38,13 +38,30 @@ function renderHomePage() {
     </main>
     <script>
 (() => {
-  const path = location.pathname || "";
-  if (path.startsWith("/http://") || path.startsWith("/https://")) {
-    const rawUrl = path.slice(1);
-    const normalizedPath = "/" + encodeURIComponent(rawUrl);
-    if (path !== normalizedPath) {
-      location.replace(normalizedPath);
+  const searchParams = new URLSearchParams(location.search || "");
+  const queryUrl = searchParams.get("url");
+  if (queryUrl) {
+    try {
+      const parsed = new URL(queryUrl);
+      if (parsed.protocol === "http:" || parsed.protocol === "https:") {
+        const normalizedPath = "/" + encodeURIComponent(queryUrl);
+        location.replace(normalizedPath);
+        return;
+      }
+    } catch {
+      // noop
     }
+  }
+
+  const path = location.pathname || "";
+  if (!path.startsWith("/http://") && !path.startsWith("/https://")) {
+    return;
+  }
+
+  const rawUrl = path.slice(1);
+  const normalizedPath = "/" + encodeURIComponent(rawUrl);
+  if (path !== normalizedPath) {
+    location.replace(normalizedPath);
   }
 })();
 </script>

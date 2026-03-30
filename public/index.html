@@ -16,13 +16,30 @@
     </main>
     <script>
       (() => {
-        const path = window.location.pathname || "";
-        if (path.startsWith("/http://") || path.startsWith("/https://")) {
-          const rawUrl = path.slice(1);
-          const normalizedPath = "/" + encodeURIComponent(rawUrl);
-          if (path !== normalizedPath) {
-            window.location.replace(normalizedPath);
+        const searchParams = new URLSearchParams(window.location.search || "");
+        const queryUrl = searchParams.get("url");
+        if (queryUrl) {
+          try {
+            const parsed = new URL(queryUrl);
+            if (parsed.protocol === "http:" || parsed.protocol === "https:") {
+              const normalizedPath = "/" + encodeURIComponent(queryUrl);
+              window.location.replace(normalizedPath);
+              return;
+            }
+          } catch {
+            // noop
           }
+        }
+
+        const path = window.location.pathname || "";
+        if (!path.startsWith("/http://") && !path.startsWith("/https://")) {
+          return;
+        }
+
+        const rawUrl = path.slice(1);
+        const normalizedPath = "/" + encodeURIComponent(rawUrl);
+        if (path !== normalizedPath) {
+          window.location.replace(normalizedPath);
         }
       })();
     </script>
