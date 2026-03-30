@@ -385,7 +385,6 @@ function renderArticlePage({ article, translationUrl }) {
 
   function applyHighlights() {
     unwrapMarks();
-    let appliedCount = 0;
     for (const highlight of highlights) {
       let range = rangeFromStored(highlight);
       if (!range) {
@@ -396,38 +395,14 @@ function renderArticlePage({ article, translationUrl }) {
       if (!range) {
         continue;
       }
-      try {
-        paintRange(range, highlight.id);
-        appliedCount += 1;
-      } catch {
-        // iOS Safari で一部range適用が失敗するケースがあるため、他のハイライト処理は継続する
-      }
+      paintRange(range, highlight.id);
     }
-    return appliedCount;
   }
 
   function persistHighlights() {
     saveHighlights();
     applyHighlights();
     renderList();
-  }
-
-  function ensureHighlightsApplied(maxRetry = 3) {
-    if (!highlights.length) {
-      return;
-    }
-
-    let remaining = maxRetry;
-    const run = () => {
-      const applied = applyHighlights();
-      if (applied > 0 || remaining <= 0) {
-        return;
-      }
-      remaining -= 1;
-      window.setTimeout(run, 120);
-    };
-
-    run();
   }
 
   function upsertHighlight(next) {
@@ -745,10 +720,8 @@ function renderArticlePage({ article, translationUrl }) {
     clearPendingHighlight();
   });
 
-  ensureHighlightsApplied();
+  applyHighlights();
   renderList();
-  window.addEventListener("load", () => ensureHighlightsApplied());
-  window.addEventListener("pageshow", () => ensureHighlightsApplied());
 })();
 </script>`;
 
