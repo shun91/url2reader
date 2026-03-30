@@ -78,6 +78,11 @@ function renderErrorPage(status, title, detail) {
 function renderArticlePage({ article, translationUrl }) {
   const safeTitle = escapeHtml(article.title || "無題");
   const safeSourceUrl = escapeHtml(article.sourceUrl);
+  const highlightStorageIdentity =
+    typeof article.sourceUrl === "string" && article.sourceUrl.trim()
+      ? article.sourceUrl.trim()
+      : `title:${article.title || "無題"}`;
+  const highlightStorageKey = `highlights:${highlightStorageIdentity}`;
   const lang = article.language === "unknown" ? "en" : article.language;
   const translationScript = translationUrl
     ? `<script>
@@ -153,7 +158,7 @@ function renderArticlePage({ article, translationUrl }) {
 </script>`;
   const highlightScript = `<script>
 (() => {
-  const storageKey = "highlights:" + location.pathname;
+  const storageKey = ${JSON.stringify(highlightStorageKey)};
   const uiAttr = "data-highlight-ui";
   const article = document.querySelector("main article");
   const contentSection = document.getElementById("reader-content");
@@ -163,7 +168,7 @@ function renderArticlePage({ article, translationUrl }) {
 
   const articleTitle = (article.querySelector("h1")?.textContent || document.title || "無題").trim();
   const sourceLink = article.querySelector(".source a");
-  const articleUrl = sourceLink?.href || location.href;
+  const articleUrl = ${JSON.stringify(article.sourceUrl)} || sourceLink?.href || location.href;
   let highlights = loadHighlights();
   let pendingHighlight = null;
   let lockedScrollY = 0;

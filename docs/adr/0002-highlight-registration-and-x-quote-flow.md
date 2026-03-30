@@ -23,11 +23,13 @@
 ### 1) 永続化は記事単位の `localStorage` を採用する
 
 #### Decision
-- 保存先は `localStorage` とし、キーは `highlights:${location.pathname}` にする。
+- 保存先は `localStorage` とし、キーは `highlights:${article.sourceUrl}` を優先する。
+- `article.sourceUrl` が利用できない場合は `title` ベースのフォールバック識別子を使う。
 
 #### Rationale
 - DB追加不要で要件を満たせる。
 - 記事ごとにデータを分離でき、他記事と混在しない。
+- Google翻訳経由時（`.translate.goog`）に `location.pathname` が記事固有値にならない場合でも、記事単位の分離を維持できる。
 
 ---
 
@@ -121,6 +123,7 @@
 - `Revert "feat: 記事ページのテキストノード処理を改善"`（`e81eae3`）
 - `Revert "feat: ハイライト適用機能の改善"`（`c3cfc51`）
 - 上記により、iOS向けの適用リトライ強化および複数ノード横断候補探索は現行採用外。
+- `location.pathname` キーが翻訳経由で共有化する問題に対応し、保存キーを `article.sourceUrl` 優先へ変更。
 
 ## Related Files
 
