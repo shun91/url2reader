@@ -197,7 +197,7 @@ body.reader-highlight-modal-open {
   position: fixed;
   z-index: 2100;
   right: 1rem;
-  bottom: calc(1rem + env(safe-area-inset-bottom));
+  bottom: calc(4.5rem + env(safe-area-inset-bottom));
   border: none;
   border-radius: 999px;
   padding: 0.52rem 0.85rem;
