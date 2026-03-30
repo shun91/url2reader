@@ -790,6 +790,12 @@ function isAssetLikePath(pathname) {
     return false;
   }
 
+  // URLをエンコードした記事パス（例: /https%3A%2F%2F...%2Findex.html）は拡張子を含むため、
+  // 先に記事URLとして解決可能かを確認して静的アセット判定から除外する。
+  if (pathToTargetUrl(pathname)) {
+    return false;
+  }
+
   const normalized = pathname.toLowerCase();
   return (
     normalized.startsWith("/api/") ||
