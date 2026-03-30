@@ -151,6 +151,534 @@ function renderArticlePage({ article, translationUrl }) {
   restoreScrollPosition();
 })();
 </script>`;
+  const highlightScript = `<script>
+(() => {
+  const storageKey = "highlights:" + location.pathname;
+  const uiAttr = "data-highlight-ui";
+  const article = document.querySelector("main article");
+  const contentSection = document.getElementById("reader-content");
+  if (!article || !contentSection) {
+    return;
+  }
+
+  const articleTitle = (article.querySelector("h1")?.textContent || document.title || "無題").trim();
+  const sourceLink = article.querySelector(".source a");
+  const articleUrl = sourceLink?.href || location.href;
+  let highlights = loadHighlights();
+  let pendingHighlight = null;
+
+  function normalizeText(value) {
+    return String(value || "").trim();
+  }
+
+  function safeParse(value) {
+    try {
+      return JSON.parse(value);
+    } catch {
+      return null;
+    }
+  }
+
+  function loadHighlights() {
+    try {
+      const raw = localStorage.getItem(storageKey);
+      const parsed = safeParse(raw);
+      if (!Array.isArray(parsed)) {
+        return [];
+      }
+      return parsed
+        .map((item) => ({
+          id: normalizeText(item?.id),
+          text: normalizeText(item?.text),
+          createdAt: normalizeText(item?.createdAt),
+          updatedAt: normalizeText(item?.updatedAt),
+          startPath: normalizeText(item?.startPath),
+          startOffset: Number.isInteger(item?.startOffset) ? item.startOffset : null,
+          endPath: normalizeText(item?.endPath),
+          endOffset: Number.isInteger(item?.endOffset) ? item.endOffset : null,
+          anchorY: Number.isFinite(item?.anchorY) ? item.anchorY : null
+        }))
+        .filter((item) => item.id && item.text);
+    } catch {
+      return [];
+    }
+  }
+
+  function saveHighlights() {
+    try {
+      localStorage.setItem(storageKey, JSON.stringify(highlights));
+    } catch {
+      // noop
+    }
+  }
+
+  function makeId() {
+    return "hl_" + Date.now().toString(36) + "_" + Math.random().toString(36).slice(2, 10);
+  }
+
+  function isUiNode(node) {
+    if (!node) {
+      return false;
+    }
+    const element = node.nodeType === Node.ELEMENT_NODE ? node : node.parentElement;
+    return !!(element && element.closest("[" + uiAttr + "]"));
+  }
+
+  function isInsideContent(node) {
+    if (!node) {
+      return false;
+    }
+    const target = node.nodeType === Node.ELEMENT_NODE ? node : node.parentNode;
+    return !!(target && contentSection.contains(target));
+  }
+
+  function nodeToPath(root, node) {
+    if (node === root) {
+      return "";
+    }
+    const parts = [];
+    let current = node;
+    while (current && current !== root) {
+      const parent = current.parentNode;
+      if (!parent) {
+        return null;
+      }
+      const index = Array.prototype.indexOf.call(parent.childNodes, current);
+      if (index < 0) {
+        return null;
+      }
+      parts.push(String(index));
+      current = parent;
+    }
+    if (current !== root) {
+      return null;
+    }
+    return parts.reverse().join(".");
+  }
+
+  function pathToNode(root, path) {
+    if (!path) {
+      return root;
+    }
+    const indexes = path.split(".").map((part) => Number(part));
+    let current = root;
+    for (const index of indexes) {
+      if (!Number.isInteger(index) || index < 0 || !current?.childNodes?.[index]) {
+        return null;
+      }
+      current = current.childNodes[index];
+    }
+    return current;
+  }
+
+  function serializeRange(range) {
+    const startPath = nodeToPath(contentSection, range.startContainer);
+    const endPath = nodeToPath(contentSection, range.endContainer);
+    if (startPath === null || endPath === null) {
+      return null;
+    }
+    return {
+      startPath,
+      startOffset: range.startOffset,
+      endPath,
+      endOffset: range.endOffset,
+      anchorY: range.getBoundingClientRect().top + window.scrollY
+    };
+  }
+
+  function rangeFromStored(highlight) {
+    const startNode = pathToNode(contentSection, highlight.startPath);
+    const endNode = pathToNode(contentSection, highlight.endPath);
+    if (!startNode || !endNode) {
+      return null;
+    }
+    const range = document.createRange();
+    try {
+      range.setStart(startNode, highlight.startOffset ?? 0);
+      range.setEnd(endNode, highlight.endOffset ?? 0);
+    } catch {
+      return null;
+    }
+    return range.collapsed ? null : range;
+  }
+
+  function findTextCandidates(text) {
+    const normalized = normalizeText(text);
+    if (!normalized) {
+      return [];
+    }
+
+    const candidates = [];
+    const walker = document.createTreeWalker(contentSection, NodeFilter.SHOW_TEXT);
+    let node = walker.nextNode();
+    while (node) {
+      const value = node.nodeValue || "";
+      if (value) {
+        let start = value.indexOf(normalized);
+        while (start !== -1) {
+          const range = document.createRange();
+          range.setStart(node, start);
+          range.setEnd(node, start + normalized.length);
+          const rect = range.getBoundingClientRect();
+          candidates.push({
+            range,
+            anchorY: rect.top + window.scrollY
+          });
+          start = value.indexOf(normalized, start + normalized.length);
+        }
+      }
+      node = walker.nextNode();
+    }
+    return candidates;
+  }
+
+  function pickClosestCandidate(candidates, anchorY) {
+    if (!candidates.length) {
+      return null;
+    }
+    if (!Number.isFinite(anchorY)) {
+      return candidates[0];
+    }
+
+    let best = candidates[0];
+    let bestDistance = Number.POSITIVE_INFINITY;
+    for (const candidate of candidates) {
+      const distance = Math.abs(candidate.anchorY - anchorY);
+      if (distance < bestDistance) {
+        best = candidate;
+        bestDistance = distance;
+      }
+    }
+    return best;
+  }
+
+  function unwrapMarks() {
+    const marks = contentSection.querySelectorAll("mark.reader-highlight");
+    for (const mark of marks) {
+      const parent = mark.parentNode;
+      if (!parent) {
+        continue;
+      }
+      while (mark.firstChild) {
+        parent.insertBefore(mark.firstChild, mark);
+      }
+      parent.removeChild(mark);
+    }
+    contentSection.normalize();
+  }
+
+  function paintRange(range, highlightId) {
+    const mark = document.createElement("mark");
+    mark.className = "reader-highlight";
+    mark.dataset.highlightId = highlightId;
+    try {
+      range.surroundContents(mark);
+      return;
+    } catch {
+      const fragment = range.extractContents();
+      mark.appendChild(fragment);
+      range.insertNode(mark);
+    }
+  }
+
+  function applyHighlights() {
+    unwrapMarks();
+    for (const highlight of highlights) {
+      let range = rangeFromStored(highlight);
+      if (!range) {
+        const candidates = findTextCandidates(highlight.text);
+        const picked = pickClosestCandidate(candidates, highlight.anchorY);
+        range = picked?.range || null;
+      }
+      if (!range) {
+        continue;
+      }
+      paintRange(range, highlight.id);
+    }
+  }
+
+  function persistHighlights() {
+    saveHighlights();
+    applyHighlights();
+    renderList();
+  }
+
+  function upsertHighlight(next) {
+    const text = normalizeText(next.text);
+    if (!text) {
+      return;
+    }
+
+    const now = new Date().toISOString();
+    const existingIndex = highlights.findIndex((item) => normalizeText(item.text) === text);
+    if (existingIndex === -1) {
+      highlights.push({
+        id: next.id || makeId(),
+        text,
+        createdAt: now,
+        updatedAt: now,
+        startPath: next.startPath || "",
+        startOffset: Number.isInteger(next.startOffset) ? next.startOffset : 0,
+        endPath: next.endPath || "",
+        endOffset: Number.isInteger(next.endOffset) ? next.endOffset : 0,
+        anchorY: Number.isFinite(next.anchorY) ? next.anchorY : null
+      });
+      persistHighlights();
+      return;
+    }
+
+    const existing = highlights[existingIndex];
+    highlights[existingIndex] = {
+      ...existing,
+      text,
+      updatedAt: now,
+      startPath: next.startPath || existing.startPath || "",
+      startOffset: Number.isInteger(next.startOffset) ? next.startOffset : existing.startOffset,
+      endPath: next.endPath || existing.endPath || "",
+      endOffset: Number.isInteger(next.endOffset) ? next.endOffset : existing.endOffset,
+      anchorY: Number.isFinite(next.anchorY) ? next.anchorY : existing.anchorY
+    };
+    persistHighlights();
+  }
+
+  function deleteHighlight(id) {
+    highlights = highlights.filter((item) => item.id !== id);
+    persistHighlights();
+  }
+
+  function buildXText(text) {
+    return '"' + normalizeText(text) + '"\\n\\n' + articleTitle + "\\n" + articleUrl;
+  }
+
+  function openXQuote(text) {
+    const intent = new URL("https://twitter.com/intent/tweet");
+    intent.searchParams.set("text", buildXText(text));
+    window.open(intent.toString(), "_blank", "noopener,noreferrer");
+  }
+
+  const root = document.createElement("div");
+  root.className = "reader-highlight-ui-root";
+  root.setAttribute(uiAttr, "true");
+  root.setAttribute("data-tts-exclude", "true");
+  document.body.appendChild(root);
+
+  const openButton = document.createElement("button");
+  openButton.type = "button";
+  openButton.className = "reader-highlight-fab";
+  openButton.textContent = "ハイライト";
+  openButton.setAttribute(uiAttr, "true");
+  openButton.setAttribute("data-tts-exclude", "true");
+  openButton.setAttribute("aria-label", "ハイライト一覧を開く");
+  root.appendChild(openButton);
+
+  const overlay = document.createElement("div");
+  overlay.className = "reader-highlight-overlay";
+  overlay.hidden = true;
+  overlay.setAttribute(uiAttr, "true");
+  overlay.setAttribute("data-tts-exclude", "true");
+  root.appendChild(overlay);
+
+  const registerButton = document.createElement("button");
+  registerButton.type = "button";
+  registerButton.className = "reader-highlight-register";
+  registerButton.textContent = "登録";
+  registerButton.hidden = true;
+  registerButton.setAttribute(uiAttr, "true");
+  registerButton.setAttribute("data-tts-exclude", "true");
+  registerButton.setAttribute("aria-label", "選択したテキストをハイライトに登録");
+  root.appendChild(registerButton);
+
+  const modal = document.createElement("section");
+  modal.className = "reader-highlight-modal";
+  modal.hidden = true;
+  modal.setAttribute(uiAttr, "true");
+  modal.setAttribute("data-tts-exclude", "true");
+  modal.setAttribute("aria-label", "登録済みハイライト");
+  root.appendChild(modal);
+
+  const header = document.createElement("header");
+  header.className = "reader-highlight-modal-header";
+  header.setAttribute(uiAttr, "true");
+  modal.appendChild(header);
+
+  const title = document.createElement("h2");
+  title.textContent = "登録済みハイライト";
+  title.setAttribute(uiAttr, "true");
+  header.appendChild(title);
+
+  const closeButton = document.createElement("button");
+  closeButton.type = "button";
+  closeButton.textContent = "閉じる";
+  closeButton.className = "reader-highlight-close";
+  closeButton.setAttribute(uiAttr, "true");
+  closeButton.setAttribute("data-tts-exclude", "true");
+  header.appendChild(closeButton);
+
+  const list = document.createElement("ul");
+  list.className = "reader-highlight-list";
+  list.setAttribute(uiAttr, "true");
+  modal.appendChild(list);
+
+  function setModalOpen(isOpen) {
+    overlay.hidden = !isOpen;
+    modal.hidden = !isOpen;
+    document.body.classList.toggle("reader-highlight-modal-open", isOpen);
+  }
+
+  function clearPendingHighlight() {
+    pendingHighlight = null;
+    registerButton.hidden = true;
+  }
+
+  function showRegisterButton(anchorY, rangeRect) {
+    registerButton.hidden = false;
+    const viewportWidth = window.innerWidth;
+    const viewportHeight = window.innerHeight;
+    const buttonWidth = registerButton.offsetWidth || 84;
+    const buttonHeight = registerButton.offsetHeight || 34;
+    const desiredLeft = Math.min(
+      Math.max(8, rangeRect.right + 8),
+      viewportWidth - buttonWidth - 8
+    );
+    const desiredTop = Math.min(
+      Math.max(8, anchorY - window.scrollY + 8),
+      viewportHeight - buttonHeight - 8
+    );
+    registerButton.style.left = desiredLeft + "px";
+    registerButton.style.top = desiredTop + "px";
+  }
+
+  function renderList() {
+    list.textContent = "";
+    if (!highlights.length) {
+      const item = document.createElement("li");
+      item.className = "reader-highlight-empty";
+      item.textContent = "ハイライトはまだありません。本文をドラッグして登録できます。";
+      item.setAttribute(uiAttr, "true");
+      list.appendChild(item);
+      openButton.textContent = "ハイライト (0)";
+      openButton.classList.remove("reader-highlight-fab-active");
+      return;
+    }
+
+    const ordered = [...highlights].sort((a, b) => b.updatedAt.localeCompare(a.updatedAt));
+    for (const itemData of ordered) {
+      const item = document.createElement("li");
+      item.className = "reader-highlight-item";
+      item.setAttribute(uiAttr, "true");
+
+      const quote = document.createElement("p");
+      quote.className = "reader-highlight-text";
+      quote.textContent = itemData.text;
+      quote.setAttribute(uiAttr, "true");
+      item.appendChild(quote);
+
+      const actions = document.createElement("div");
+      actions.className = "reader-highlight-actions";
+      actions.setAttribute(uiAttr, "true");
+
+      const xButton = document.createElement("button");
+      xButton.type = "button";
+      xButton.className = "reader-highlight-action";
+      xButton.textContent = "Xで引用";
+      xButton.setAttribute(uiAttr, "true");
+      xButton.setAttribute("data-tts-exclude", "true");
+      xButton.addEventListener("click", () => {
+        openXQuote(itemData.text);
+      });
+      actions.appendChild(xButton);
+
+      const removeButton = document.createElement("button");
+      removeButton.type = "button";
+      removeButton.className = "reader-highlight-action reader-highlight-delete";
+      removeButton.textContent = "削除";
+      removeButton.setAttribute(uiAttr, "true");
+      removeButton.setAttribute("data-tts-exclude", "true");
+      removeButton.addEventListener("click", () => {
+        deleteHighlight(itemData.id);
+      });
+      actions.appendChild(removeButton);
+
+      item.appendChild(actions);
+      list.appendChild(item);
+    }
+
+    openButton.textContent = "ハイライト (" + highlights.length + ")";
+    openButton.classList.add("reader-highlight-fab-active");
+  }
+
+  openButton.addEventListener("click", () => setModalOpen(modal.hidden));
+  closeButton.addEventListener("click", () => setModalOpen(false));
+  overlay.addEventListener("click", () => setModalOpen(false));
+  registerButton.addEventListener("click", () => {
+    if (!pendingHighlight) {
+      return;
+    }
+    upsertHighlight(pendingHighlight);
+    clearPendingHighlight();
+    const selection = window.getSelection();
+    if (selection) {
+      selection.removeAllRanges();
+    }
+  });
+
+  document.addEventListener("keydown", (event) => {
+    if (event.key === "Escape" && !modal.hidden) {
+      setModalOpen(false);
+    }
+    if (event.key === "Escape") {
+      clearPendingHighlight();
+    }
+  });
+
+  document.addEventListener("mouseup", () => {
+    const selection = window.getSelection();
+    if (!selection || selection.rangeCount === 0 || selection.isCollapsed) {
+      return;
+    }
+    const selectedText = normalizeText(selection.toString());
+    if (!selectedText) {
+      return;
+    }
+
+    const range = selection.getRangeAt(0).cloneRange();
+    if (isUiNode(range.commonAncestorContainer)) {
+      return;
+    }
+    if (!isInsideContent(range.startContainer) || !isInsideContent(range.endContainer)) {
+      return;
+    }
+
+    const anchorY = range.getBoundingClientRect().top + window.scrollY;
+    const serialized = serializeRange(range);
+    const candidates = findTextCandidates(selectedText);
+    const picked = pickClosestCandidate(candidates, anchorY);
+    const normalizedSerialized = picked?.range ? serializeRange(picked.range) : null;
+    const finalSerialized = normalizedSerialized || serialized;
+    if (!finalSerialized) {
+      return;
+    }
+
+    pendingHighlight = {
+      text: selectedText,
+      ...finalSerialized,
+      anchorY
+    };
+    showRegisterButton(anchorY, range.getBoundingClientRect());
+  });
+
+  document.addEventListener("mousedown", (event) => {
+    const target = event.target;
+    if (target instanceof Element && target.closest("[" + uiAttr + "]")) {
+      return;
+    }
+    clearPendingHighlight();
+  });
+
+  applyHighlights();
+  renderList();
+})();
+</script>`;
 
   return `<!doctype html>
 <html lang="${escapeHtml(lang)}">
@@ -165,11 +693,12 @@ function renderArticlePage({ article, translationUrl }) {
       <article>
         <h1>${safeTitle}</h1>
         <p class="source">Source: <a href="${safeSourceUrl}" rel="noopener noreferrer">${safeSourceUrl}</a></p>
-        <section>${article.contentHtml}</section>
+        <section id="reader-content">${article.contentHtml}</section>
       </article>
     </main>
     ${translationScript}
     ${scrollPersistenceScript}
+    ${highlightScript}
   </body>
 </html>`;
 }
