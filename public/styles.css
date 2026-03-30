@@ -159,8 +159,10 @@ mark.reader-highlight {
   background: #0b57d0;
 }
 
+html.reader-highlight-modal-open,
 body.reader-highlight-modal-open {
   overflow: hidden;
+  overscroll-behavior: none;
 }
 
 .reader-highlight-overlay {
@@ -241,6 +243,7 @@ body.reader-highlight-modal-open {
   padding: 0.75rem;
   list-style: none;
   overflow: auto;
+  -webkit-overflow-scrolling: touch;
 }
 
 .reader-highlight-item {

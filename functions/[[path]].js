@@ -166,6 +166,8 @@ function renderArticlePage({ article, translationUrl }) {
   const articleUrl = sourceLink?.href || location.href;
   let highlights = loadHighlights();
   let pendingHighlight = null;
+  let lockedScrollY = 0;
+  let isScrollLocked = false;
 
   function normalizeText(value) {
     return String(value || "").trim();
@@ -519,10 +521,44 @@ function renderArticlePage({ article, translationUrl }) {
   list.setAttribute(uiAttr, "true");
   modal.appendChild(list);
 
+  function lockPageScroll() {
+    if (isScrollLocked) {
+      return;
+    }
+    lockedScrollY = window.scrollY || window.pageYOffset || 0;
+    isScrollLocked = true;
+    document.documentElement.classList.add("reader-highlight-modal-open");
+    document.body.classList.add("reader-highlight-modal-open");
+    document.body.style.position = "fixed";
+    document.body.style.top = "-" + lockedScrollY + "px";
+    document.body.style.left = "0";
+    document.body.style.right = "0";
+    document.body.style.width = "100%";
+  }
+
+  function unlockPageScroll() {
+    if (!isScrollLocked) {
+      return;
+    }
+    isScrollLocked = false;
+    document.documentElement.classList.remove("reader-highlight-modal-open");
+    document.body.classList.remove("reader-highlight-modal-open");
+    document.body.style.position = "";
+    document.body.style.top = "";
+    document.body.style.left = "";
+    document.body.style.right = "";
+    document.body.style.width = "";
+    window.scrollTo(0, lockedScrollY);
+  }
+
   function setModalOpen(isOpen) {
     overlay.hidden = !isOpen;
     modal.hidden = !isOpen;
-    document.body.classList.toggle("reader-highlight-modal-open", isOpen);
+    if (isOpen) {
+      lockPageScroll();
+    } else {
+      unlockPageScroll();
+    }
   }
 
   function clearPendingHighlight() {
