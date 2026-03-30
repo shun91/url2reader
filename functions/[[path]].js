@@ -530,22 +530,8 @@ function renderArticlePage({ article, translationUrl }) {
     registerButton.hidden = true;
   }
 
-  function showRegisterButton(anchorY, rangeRect) {
+  function showRegisterButton() {
     registerButton.hidden = false;
-    const viewportWidth = window.innerWidth;
-    const viewportHeight = window.innerHeight;
-    const buttonWidth = registerButton.offsetWidth || 84;
-    const buttonHeight = registerButton.offsetHeight || 34;
-    const desiredLeft = Math.min(
-      Math.max(8, rangeRect.right + 8),
-      viewportWidth - buttonWidth - 8
-    );
-    const desiredTop = Math.min(
-      Math.max(8, anchorY - window.scrollY + 8),
-      viewportHeight - buttonHeight - 8
-    );
-    registerButton.style.left = desiredLeft + "px";
-    registerButton.style.top = desiredTop + "px";
   }
 
   function renderList() {
@@ -664,7 +650,7 @@ function renderArticlePage({ article, translationUrl }) {
       ...finalSerialized,
       anchorY
     };
-    showRegisterButton(anchorY, range.getBoundingClientRect());
+    showRegisterButton();
   };
 
   document.addEventListener("mouseup", updatePendingHighlightFromSelection);

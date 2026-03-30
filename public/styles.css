@@ -196,12 +196,14 @@ body.reader-highlight-modal-open {
 .reader-highlight-register {
   position: fixed;
   z-index: 2100;
+  right: 1rem;
+  bottom: calc(1rem + env(safe-area-inset-bottom));
   border: none;
   border-radius: 999px;
-  padding: 0.45rem 0.75rem;
+  padding: 0.52rem 0.85rem;
   background: #0b57d0;
   color: #ffffff;
-  font-size: 0.82rem;
+  font-size: 0.86rem;
   font-weight: 700;
   cursor: pointer;
   box-shadow: 0 8px 18px rgba(0, 0, 0, 0.2);
@@ -298,5 +300,10 @@ body.reader-highlight-modal-open {
     width: auto;
     bottom: calc(4rem + env(safe-area-inset-bottom));
     max-height: min(72vh, 620px);
+  }
+
+  .reader-highlight-register {
+    right: 0.75rem;
+    bottom: calc(4rem + env(safe-area-inset-bottom));
   }
 }
