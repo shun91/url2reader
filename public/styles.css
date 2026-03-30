@@ -1,5 +1,5 @@
 :root {
-  color-scheme: light;
+  color-scheme: light dark;
 }
 
 * {
@@ -308,5 +308,105 @@ body.reader-highlight-modal-open {
   .reader-highlight-register {
     right: 0.75rem;
     bottom: calc(4rem + env(safe-area-inset-bottom));
+  }
+}
+
+@media (prefers-color-scheme: dark) {
+  html,
+  body {
+    background: #0f1115;
+    color: #e7e9ee;
+  }
+
+  article a {
+    color: #8ab4ff;
+  }
+
+  article blockquote {
+    border-left-color: #4b5563;
+  }
+
+  article pre {
+    background: #111827;
+    border-color: #374151;
+  }
+
+  article code {
+    background: #111827;
+  }
+
+  article table {
+    border-color: #374151;
+  }
+
+  article th,
+  article td {
+    border-color: #374151;
+  }
+
+  article th {
+    background: #1f2937;
+  }
+
+  article figcaption {
+    color: #9ca3af;
+  }
+
+  mark.reader-highlight {
+    background: #665c00;
+  }
+
+  .reader-highlight-fab {
+    background: #3f4652;
+    box-shadow: 0 10px 24px rgba(0, 0, 0, 0.45);
+  }
+
+  .reader-highlight-fab.reader-highlight-fab-active {
+    background: #2a67ce;
+  }
+
+  .reader-highlight-overlay {
+    background: rgba(0, 0, 0, 0.6);
+  }
+
+  .reader-highlight-modal {
+    background: #111827;
+    border-color: #374151;
+    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.55);
+  }
+
+  .reader-highlight-register {
+    background: #2a67ce;
+  }
+
+  .reader-highlight-modal-header {
+    border-bottom-color: #374151;
+  }
+
+  .reader-highlight-close {
+    border-color: #4b5563;
+    background: #111827;
+    color: #e5e7eb;
+  }
+
+  .reader-highlight-item {
+    border-color: #374151;
+    background: #0f172a;
+  }
+
+  .reader-highlight-action {
+    border-color: #4b5563;
+    background: #111827;
+    color: #e5e7eb;
+  }
+
+  .reader-highlight-delete {
+    color: #fca5a5;
+    border-color: #7f1d1d;
+  }
+
+  .reader-highlight-empty {
+    color: #cbd5e1;
+    border-color: #475569;
   }
 }
