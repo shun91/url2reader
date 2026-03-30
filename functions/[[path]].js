@@ -310,79 +310,26 @@ function renderArticlePage({ article, translationUrl }) {
       return [];
     }
 
-    const segments = [];
-    let fullText = "";
-    const textWalker = document.createTreeWalker(contentSection, NodeFilter.SHOW_TEXT);
-    let textNode = textWalker.nextNode();
-    while (textNode) {
-      const value = textNode.nodeValue || "";
-      if (value) {
-        const start = fullText.length;
-        fullText += value;
-        segments.push({
-          node: textNode,
-          start,
-          end: fullText.length
-        });
-      }
-      textNode = textWalker.nextNode();
-    }
-
-    if (!fullText) {
-      return [];
-    }
-
-    function locateAbsoluteOffset(offset) {
-      if (!segments.length) {
-        return null;
-      }
-      if (offset <= 0) {
-        return { node: segments[0].node, offset: 0 };
-      }
-      if (offset >= fullText.length) {
-        const last = segments[segments.length - 1];
-        return { node: last.node, offset: last.node.nodeValue.length };
-      }
-
-      for (let i = 0; i < segments.length; i += 1) {
-        const segment = segments[i];
-        if (offset < segment.end) {
-          return {
-            node: segment.node,
-            offset: offset - segment.start
-          };
-        }
-      }
-
-      const last = segments[segments.length - 1];
-      return { node: last.node, offset: last.node.nodeValue.length };
-    }
-
     const candidates = [];
-    let fromIndex = 0;
-    while (fromIndex < fullText.length) {
-      const startIndex = fullText.indexOf(normalized, fromIndex);
-      if (startIndex === -1) {
-        break;
-      }
-      const endIndex = startIndex + normalized.length;
-      const startPoint = locateAbsoluteOffset(startIndex);
-      const endPoint = locateAbsoluteOffset(endIndex);
-      if (startPoint && endPoint) {
-        const range = document.createRange();
-        try {
-          range.setStart(startPoint.node, startPoint.offset);
-          range.setEnd(endPoint.node, endPoint.offset);
+    const walker = document.createTreeWalker(contentSection, NodeFilter.SHOW_TEXT);
+    let node = walker.nextNode();
+    while (node) {
+      const value = node.nodeValue || "";
+      if (value) {
+        let start = value.indexOf(normalized);
+        while (start !== -1) {
+          const range = document.createRange();
+          range.setStart(node, start);
+          range.setEnd(node, start + normalized.length);
           const rect = range.getBoundingClientRect();
           candidates.push({
             range,
             anchorY: rect.top + window.scrollY
           });
-        } catch {
-          // noop
+          start = value.indexOf(normalized, start + normalized.length);
         }
       }
-      fromIndex = startIndex + normalized.length;
+      node = walker.nextNode();
     }
     return candidates;
   }
