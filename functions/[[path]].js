@@ -631,7 +631,7 @@ function renderArticlePage({ article, translationUrl }) {
     }
   });
 
-  document.addEventListener("mouseup", () => {
+  const updatePendingHighlightFromSelection = () => {
     const selection = window.getSelection();
     if (!selection || selection.rangeCount === 0 || selection.isCollapsed) {
       return;
@@ -665,9 +665,32 @@ function renderArticlePage({ article, translationUrl }) {
       anchorY
     };
     showRegisterButton(anchorY, range.getBoundingClientRect());
+  };
+
+  document.addEventListener("mouseup", updatePendingHighlightFromSelection);
+  document.addEventListener("touchend", () => {
+    window.setTimeout(updatePendingHighlightFromSelection, 0);
+  });
+
+  let selectionChangeTimer = null;
+  document.addEventListener("selectionchange", () => {
+    if (selectionChangeTimer !== null) {
+      window.clearTimeout(selectionChangeTimer);
+    }
+    selectionChangeTimer = window.setTimeout(() => {
+      selectionChangeTimer = null;
+      updatePendingHighlightFromSelection();
+    }, 80);
   });
 
   document.addEventListener("mousedown", (event) => {
+    const target = event.target;
+    if (target instanceof Element && target.closest("[" + uiAttr + "]")) {
+      return;
+    }
+    clearPendingHighlight();
+  });
+  document.addEventListener("touchstart", (event) => {
     const target = event.target;
     if (target instanceof Element && target.closest("[" + uiAttr + "]")) {
       return;
