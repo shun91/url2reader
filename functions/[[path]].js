@@ -78,11 +78,12 @@ function renderErrorPage(status, title, detail) {
 function renderArticlePage({ article, translationUrl }) {
   const safeTitle = escapeHtml(article.title || "無題");
   const safeSourceUrl = escapeHtml(article.sourceUrl);
-  const highlightStorageIdentity =
+  const articleStorageIdentity =
     typeof article.sourceUrl === "string" && article.sourceUrl.trim()
       ? article.sourceUrl.trim()
       : `title:${article.title || "無題"}`;
-  const highlightStorageKey = `highlights:${highlightStorageIdentity}`;
+  const highlightStorageKey = `highlights:${articleStorageIdentity}`;
+  const scrollStorageKey = `scroll-position:${articleStorageIdentity}`;
   const lang = article.language === "unknown" ? "en" : article.language;
   const translationScript = translationUrl
     ? `<script>
@@ -102,7 +103,7 @@ function renderArticlePage({ article, translationUrl }) {
     : "";
   const scrollPersistenceScript = `<script>
 (() => {
-  const storageKey = "scroll-position:" + location.pathname;
+  const storageKey = ${JSON.stringify(scrollStorageKey)};
 
   const saveScrollPosition = () => {
     try {
